@@ -1,0 +1,11 @@
+.venv/
+
+.airflow/
+
+.vscode/
+
+dags/__pychache__
+
+.env
+
+docker-compose.yaml
