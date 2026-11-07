@@ -21,17 +21,17 @@ def get_all_papers() -> list[dict]:
     """
     return [
         {
-            "filename": "example_paper.pdf",
-            "title": "An Example Paper on Data Pipelines",
-            "summary": "This paper describes how to build reliable data pipelines.",
-            "keywords": ["data pipelines", "orchestration"],
-            "category": "Data Engineering",
+            "filename": "example_paper_1.pdf",
+            "title": "An Example Paper on Tropical Fish lmao",
+            "summary": "This paper describes interesting fauna.",
+            "keywords": ["tropical fish", "corals", "aquatic life"],
+            "category": "Biology",
         },
         {
-            "filename": "another_paper.pdf",
-            "title": "Fairness in Machine Learning Models",
-            "summary": "This paper studies bias in classification models.",
-            "keywords": ["fairness", "bias"],
-            "category": "Responsible AI",
+            "filename": "example_paper_2.pdf",
+            "title": "Metacognition and piano learning",
+            "summary": "The mechanisms behind piano learning",
+            "keywords": ["piano", "learning", "music"],
+            "category": "Didactics",
         },
     ]
