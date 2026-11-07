@@ -109,7 +109,7 @@ def save_json(data: dict) -> str:
     return str(output_path)
 
 @task
-def find_new_pdfs() -> list[str]:
+def find_new_pdfs() -> list[str]: # cette fonction utilise get_processed_filenames() définie dans db.py
     """Return the full paths of PDFs in the papers folder that are not yet in the database."""
     if not PAPERS_DIR.exists():
         raise FileNotFoundError(f"Papers folder not found: {PAPERS_DIR}")
