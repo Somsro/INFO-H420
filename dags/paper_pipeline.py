@@ -5,6 +5,8 @@ from airflow.sdk import dag, task
 from pathlib import Path
 from pymupdf4llm import to_markdown
 from openai import OpenAI
+from config import PAPERS_DIR
+from db import get_processed_filenames
 
 
 PROMPT_TEMPLATE = """You are an assistant that analyzes research papers.
@@ -106,6 +108,18 @@ def save_json(data: dict) -> str:
 
     return str(output_path)
 
+@task
+def find_new_pdfs() -> list[str]:
+    """Return the full paths of PDFs in the papers folder that are not yet in the database."""
+    if not PAPERS_DIR.exists():
+        raise FileNotFoundError(f"Papers folder not found: {PAPERS_DIR}")
+
+    processed = get_processed_filenames()
+    all_pdfs = sorted(PAPERS_DIR.glob("*.pdf"))
+    new_pdfs = [str(pdf) for pdf in all_pdfs if pdf.name not in processed]
+
+    print(f"Found {len(all_pdfs)} PDFs, {len(new_pdfs)} new: {[Path(p).name for p in new_pdfs]}")
+    return new_pdfs
 
 @dag(
     dag_id="paper_pipeline",
@@ -116,6 +130,7 @@ def save_json(data: dict) -> str:
 )
 def paper_pipeline():
     pdf = "assignment3.pdf"
+    new_pdfs = find_new_pdfs()
 
     """
     Faire un research library synced with google drive (accessible par le code)
@@ -130,12 +145,12 @@ def paper_pipeline():
     #Convert pdf to md
     converted = pdf_to_markdown(pdf_path=pdf)
     md_path = save_markdown(converted)
-    print(f"Markdown file saved at: {md_path}")
+    # print(f"Markdown file saved at: {md_path}")
 
     #Call the LLM to summarize the paper and save the JSON output
     data = llm_summary(converted["markdown"])
     json_path = save_json(data)
-    print(f"JSON saved at: {json_path}")
+    # print(f"JSON saved at: {json_path}")
 
 
 

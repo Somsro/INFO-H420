@@ -9,3 +9,7 @@ dags/__pycache__
 .env
 
 docker-compose.yaml
+
+__pycache__/
+
+*.db
