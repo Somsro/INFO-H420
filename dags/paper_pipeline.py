@@ -12,7 +12,10 @@ from db import get_processed_filenames, save_paper, get_all_papers
 PROMPT_TEMPLATE = """You are an assistant that analyzes research papers.
 
 Read the paper below (converted to Markdown) and return ONLY a valid JSON object
-with exactly this structure:
+with this structure:
+The values shown below are placeholders only.
+You MUST replace every placeholder with information extracted from the paper.
+Never return "Paper title", "A short summary...", "keyword one", or "keyword two".
 
 {{
   "title": "Paper title",
@@ -21,12 +24,16 @@ with exactly this structure:
   "category": "Data Engineering"
 }}
 
-Rules:
+Strictly follow the rules:
 - "title": the paper's title, as a string.
 - "summary": a short summary of the paper, as a string.
-- "keywords": a list of 2 keywords, as strings.
+- "keywords": an array containing EXACTLY TWO strings: no more and no fewer.
+  Select the two most important keywords from the paper. Do not include any
+  additional keywords, sub-keywords, phrases, or explanations in this array.
 - "category": a single short category (e.g. "Data Engineering", "Machine Learning",
   "Responsible AI", "Process Modeling").
+- Before returning the JSON, count the items in "keywords" and verify that the
+  array contains exactly 2 items.
 - Do not add any text, explanation, or Markdown code fences outside the JSON object.
 
 Paper:
