@@ -61,7 +61,7 @@ def pdf_to_markdown(pdf_path: str) -> dict:
     return {"filename": path.name, "md_path": str(md_path)}
 
 
-@task(retries=1, retry_delay=timedelta(seconds=5)) #We need to specify the retry because it's 5min by default
+@task(retries=1, retry_delay=timedelta(seconds=5)) #We need to specify the retry_delay because it's 5min by default
 def llm_summary(paper: dict) -> dict:
     """Call the local LLM and return the parsed metadata as a dict.
 
