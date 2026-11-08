@@ -13,3 +13,5 @@ docker-compose.yaml
 __pycache__/
 
 *.db
+
+data/

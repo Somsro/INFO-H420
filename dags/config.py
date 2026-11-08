@@ -11,3 +11,5 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(REPO_ROOT / ".env")
 
 PAPERS_DIR = Path(os.environ["PAPERS_DIR"])
+
+MARKDOWN_DIR = REPO_ROOT / "data" / "markdown"
