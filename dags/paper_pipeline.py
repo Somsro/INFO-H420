@@ -5,9 +5,9 @@ from airflow.sdk import dag, task
 from pathlib import Path
 from pymupdf4llm import to_markdown
 from openai import OpenAI
-from config import PAPERS_DIR, OUTPUT_DIR, MARKDOWN_DIR
+from config import PAPERS_DIR, OUTPUT_DIR, MARKDOWN_DIR, HTML_PATH
 from db import get_processed_filenames, save_paper, get_all_papers
-
+from html_page import build_html
 
 PROMPT_TEMPLATE = """You are an assistant that analyzes research papers.
 
@@ -119,10 +119,11 @@ def find_new_pdfs() -> list[str]: # cette fonction utilise get_processed_filenam
 def build_html_page() -> None:
     """Regenerate the static HTML page from every paper in the database.
 
-    Runs even in case of failure.
+    Runs even if some papers failed, so one bad PDF can't block the page.
     """
     papers = get_all_papers()
-    print(f"[stub] would build the HTML page with {len(papers)} papers")
+    build_html(papers, HTML_PATH)
+    print(f"Wrote HTML page with {len(papers)} papers to {HTML_PATH}")
 
 
 @task

@@ -17,3 +17,4 @@ OUTPUT_DIR = DRIVE_ROOT / "output"
 
 MARKDOWN_DIR = REPO_ROOT / "data" / "markdown"
 
+HTML_PATH = OUTPUT_DIR / "index.html"
