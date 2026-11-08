@@ -5,7 +5,7 @@ from airflow.sdk import dag, task
 from pathlib import Path
 from pymupdf4llm import to_markdown
 from openai import OpenAI
-from config import PAPERS_DIR, MARKDOWN_DIR
+from config import PAPERS_DIR, OUTPUT_DIR, MARKDOWN_DIR
 from db import get_processed_filenames, save_paper, get_all_papers
 
 

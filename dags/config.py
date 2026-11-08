@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(REPO_ROOT / ".env")
 
-PAPERS_DIR = Path(os.environ["PAPERS_DIR"])
+DRIVE_ROOT = Path(os.environ["DRIVE_ROOT"])
+PAPERS_DIR = DRIVE_ROOT / "papers"
+OUTPUT_DIR = DRIVE_ROOT / "output"
+
 
 MARKDOWN_DIR = REPO_ROOT / "data" / "markdown"
+
