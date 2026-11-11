@@ -5,8 +5,9 @@ from airflow.sdk import dag, task
 from pathlib import Path
 from pymupdf4llm import to_markdown
 from openai import OpenAI
-from config import PAPERS_DIR, OUTPUT_DIR, MARKDOWN_DIR, HTML_PATH
-from db import get_processed_filenames, save_paper, get_all_papers
+from config import PAPERS_DIR, MARKDOWN_DIR, HTML_PATH
+from discord_webhook import send_discord_webhook
+from db import PaperDatabase
 from html_page import build_html
 
 PROMPT_TEMPLATE = """You are an assistant that analyzes research papers.
@@ -51,8 +52,10 @@ def _validate(data: dict) -> None:
         if not isinstance(data[field], expected_type):
             raise ValueError(f"Field '{field}' should be of type {expected_type.__name__}")
 
-
-
+@task
+def init_database() -> None:
+  """Initialize SQLite schema at pipeline execution start."""
+  PaperDatabase()
 
 @task
 def pdf_to_markdown(pdf_path: str) -> dict:
@@ -98,8 +101,11 @@ def llm_summary(paper: dict) -> dict:
 @task
 def store_paper(paper: dict) -> dict: # remplace save_json mais considère la metadonnée
     """Save one paper's metadata to the database and pass it on for the notification."""
-    metadata = {key: paper[key] for key in ("title", "summary", "keywords", "category")}
-    save_paper(paper["filename"], metadata)
+    metadata = {
+        key: paper[key] for key in ("title", "summary", "keywords", "category")
+    }
+    db = PaperDatabase()
+    db.save_paper(paper["filename"], metadata)
     return paper
 
 @task
@@ -108,11 +114,15 @@ def find_new_pdfs() -> list[str]: # cette fonction utilise get_processed_filenam
     if not PAPERS_DIR.exists():
         raise FileNotFoundError(f"Papers folder not found: {PAPERS_DIR}")
 
-    processed = get_processed_filenames()
+    db = PaperDatabase()
+    processed = db.get_processed_filenames()
     all_pdfs = sorted(PAPERS_DIR.glob("*.pdf"))
     new_pdfs = [str(pdf) for pdf in all_pdfs if pdf.name not in processed]
 
-    print(f"Found {len(all_pdfs)} PDFs, {len(new_pdfs)} new: {[Path(p).name for p in new_pdfs]}")
+    print(
+        f"Found {len(all_pdfs)} PDFs, {len(new_pdfs)} new:"
+        f" {[Path(p).name for p in new_pdfs]}"
+    )
     return new_pdfs
 
 @task(trigger_rule="all_done")
@@ -121,16 +131,22 @@ def build_html_page() -> None:
 
     Runs even if some papers failed, so one bad PDF can't block the page.
     """
-    papers = get_all_papers()
+    db = PaperDatabase()
+    papers = db.get_all_papers()
     build_html(papers, HTML_PATH)
     print(f"Wrote HTML page with {len(papers)} papers to {HTML_PATH}")
 
 
+
 @task
-def notify_new_papers(new_papers: list[dict]) -> None: # il faut ajouter les fonctionnalités Discord ici, mais pour l'instant on se contente d'un print
-    """Send a Discord notification listing the newly processed papers."""
-    titles = [paper["title"] for paper in new_papers]
-    print(f"[stub] would notify Discord about {len(titles)} new papers: {titles}")
+def notify_new_papers(new_papers: list[dict]) -> None:
+  """Airflow task that sends Discord notifications."""
+  if not new_papers:
+    print("No new papers processed. Skipping Discord notification.")
+    return
+
+  send_discord_webhook(new_papers)
+  print(f"Sent Discord notification for {len(new_papers)} papers.")
 
 
 @dag(
@@ -152,7 +168,12 @@ def paper_pipeline():
     créer le html comme ils veulent
     discord
     """
+    # Setup DB schema step
+    init_db_step = init_database()
     new_pdfs = find_new_pdfs()
+
+    # Enforce schema check prior to searching/processing PDFs
+    init_db_step >> new_pdfs
 
     # Fan-out: one task instance per new PDF, chained by map index
     converted = pdf_to_markdown.expand(pdf_path=new_pdfs)

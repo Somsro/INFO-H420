@@ -134,7 +134,7 @@ airflow dags test paper_pipeline
 Results:
 
 - Library page: `DRIVE_ROOT/output/index.html` (search box and category filter)
-- Database: PLAZMA: path
+- Database: `REPO_ROOT/data/papers.db`
 - A Discord message for each run that processed new papers
 
 ## Notes and limitations
