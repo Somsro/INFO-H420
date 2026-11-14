@@ -22,17 +22,18 @@ Never return "Paper title", "A short summary...", "keyword one", or "keyword two
   "title": "Paper title",
   "summary": "A short summary of the paper (3-5 sentences).",
   "keywords": ["keyword one", "keyword two"],
-  "category": "Data Engineering"
+  "category": "Choose a catergory based on the paper"
 }}
 
 Strictly follow the rules:
 - "title": the paper's title, as a string.
 - "summary": a short summary of the paper, as a string.
-- "keywords": an array containing EXACTLY TWO strings: no more and no fewer.
+- "keywords": an array containing a few strings.
   Select the two most important keywords from the paper. Do not include any
   additional keywords, sub-keywords, phrases, or explanations in this array.
 - "category": a single short category (e.g. "Data Engineering", "Machine Learning",
-  "Responsible AI", "Process Modeling").
+  "Responsible AI", "Process Modeling", etc...) Don't exclude any other possible
+  categories.
 - Before returning the JSON, count the items in "keywords" and verify that the
   array contains exactly 2 items.
 - Do not add any text, explanation, or Markdown code fences outside the JSON object.
@@ -79,7 +80,8 @@ def llm_summary(paper: dict) -> dict:
 
     We consider the retry is not only for the json but also for the llm call itself.
     """
-    paper_markdown = Path(paper["md_path"]).read_text(encoding="utf-8")
+    md_path = Path(paper["md_path"])
+    paper_markdown = md_path.read_text(encoding="utf-8")
     client = OpenAI(
         base_url="http://localhost:11434/v1",
         api_key="ollama",
@@ -96,6 +98,11 @@ def llm_summary(paper: dict) -> dict:
 
     data = json.loads(response.choices[0].message.content)  # raises JSONDecodeError if invalid
     _validate(data)  # raises ValueError if fields are missing or wrongly typed
+
+    md_path.unlink()
+    print(f"Deleted temporary Markdown file: {md_path}")
+
+
     return {"filename": paper["filename"], **data}
 
 @task
