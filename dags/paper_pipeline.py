@@ -22,7 +22,7 @@ Never return "Paper title", "A short summary...", "keyword one", or "keyword two
   "title": "Paper title",
   "summary": "A short summary of the paper (3-5 sentences).",
   "keywords": ["keyword one", "keyword two"],
-  "category": "Choose a catergory based on the paper"
+  "category": "Choose a category based on the paper"
 }}
 
 Strictly follow the rules:
