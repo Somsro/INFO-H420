@@ -47,6 +47,7 @@ Paper:
 REQUIRED_FIELDS = {"title": str, "summary": str, "keywords": list, "category": str}
 
 def _validate(data: dict) -> None:
+    """ Raise error in case the data returned by the llm is not valid (missing fields or wrong types)."""
     for field, expected_type in REQUIRED_FIELDS.items():
         if field not in data:
             raise ValueError(f"Missing field: {field}")
@@ -60,7 +61,9 @@ def init_database() -> None:
 
 @task
 def pdf_to_markdown(pdf_path: str) -> dict:
-    """Converts a PDF to Markdown, then saves it in MARKDOWN_DIR, returning a dict with the file name and the file path of the Markdown."""
+    """Converts a PDF to Markdown using pymupdf4llm library.
+    Creates a temporary file in MARKDOWN_DIR (deleted after it the llm made the summary).
+    Returns a dict with the file name and the file path of the Markdown."""
     path = Path(pdf_path)
     markdown = to_markdown(str(path))
 
@@ -72,13 +75,16 @@ def pdf_to_markdown(pdf_path: str) -> dict:
     return {"filename": path.name, "md_path": str(md_path)}
 
 
-@task(retries=1, retry_delay=timedelta(seconds=5)) #We need to specify the retry_delay because it's 5min by default
+@task(retries=1, retry_delay=timedelta(seconds=5)) #We need to specify the retry_delay because it is 5min by default
 def llm_summary(paper: dict) -> dict:
     """Call the local LLM and return the parsed metadata as a dict.
 
     Raises on invalid JSON or missing fields; Airflow retries the task once.
-
     We consider the retry is not only for the json but also for the llm call itself.
+
+    The associated markdown file is deleted at the end of this task.
+
+    Returns a dict with the original filename and the metadata fields: title, summary, keywords, category.
     """
     md_path = Path(paper["md_path"])
     paper_markdown = md_path.read_text(encoding="utf-8")
@@ -106,7 +112,7 @@ def llm_summary(paper: dict) -> dict:
     return {"filename": paper["filename"], **data}
 
 @task
-def store_paper(paper: dict) -> dict: # remplace save_json mais considère la metadonnée
+def store_paper(paper: dict) -> dict:
     """Save one paper's metadata to the database and pass it on for the notification."""
     metadata = {
         key: paper[key] for key in ("title", "summary", "keywords", "category")
@@ -116,7 +122,7 @@ def store_paper(paper: dict) -> dict: # remplace save_json mais considère la me
     return paper
 
 @task
-def find_new_pdfs() -> list[str]: # cette fonction utilise get_processed_filenames() définie dans db.py
+def find_new_pdfs() -> list[str]:
     """Return the full paths of PDFs in the papers folder that are not yet in the database."""
     if not PAPERS_DIR.exists():
         raise FileNotFoundError(f"Papers folder not found: {PAPERS_DIR}")
@@ -159,22 +165,13 @@ def notify_new_papers(new_papers: list[dict]) -> None:
 @dag(
     dag_id="paper_pipeline",
     description="Turn new research PDFs into a searchable study library",
-    schedule=timedelta(minutes=5),
-    start_date=datetime(2026, 11, 6, tzinfo=ZoneInfo("Europe/Brussels")),
+    schedule=timedelta(minutes=5), # run every 5 minutes
+    start_date=datetime(2026, 11, 14, tzinfo=ZoneInfo("Europe/Brussels")),
     catchup=False,
     max_active_runs=1,  # never run two pipelines at once
 )
 def paper_pipeline():
     """Scan the papers folder, process each new PDF, then update the HTML and notify Discord."""
-    """
-    Faire un research library synced with google drive (accessible par le code)
-    Check comment le dag est trigger (X minutes ou bien dès que y a un nouveau pdf dans le dossier)
-    Check if pdf is already summarized (maybe have 2 folders, one done and to be done OR use html file)
-    corriger le summary du llm (prompt buggé ?)
-    build la db
-    créer le html comme ils veulent
-    discord
-    """
     # Setup DB schema step
     init_db_step = init_database()
     new_pdfs = find_new_pdfs()

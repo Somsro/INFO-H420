@@ -11,13 +11,13 @@ The DAG `paper_pipeline` runs every 5 minutes (one run at a time):
 
 ```
 find_new_pdfs ──► pdf_to_markdown ──► llm_summary ──► store_paper ──► build_html_page ──► notify_new_papers
-                  └──────── one task instance per new PDF ────────┘
+                 └──────── one task instance per new PDF ────────┘
 ```
 
 | Task | What it does |
 |---|---|
 | `find_new_pdfs` | Lists the PDFs in `papers/` that are not yet in the database |
-| `pdf_to_markdown` | Converts each PDF to Markdown with PyMuPDF4LLM (saved locally in `data/markdown/`) |
+| `pdf_to_markdown` | Converts each PDF to Markdown with PyMuPDF4LLM (temporary saved locally in `data/markdown/`) |
 | `llm_summary` | Sends the start of the paper to the local LLM (Ollama, JSON mode), parses and validates the JSON; retried once on failure |
 | `store_paper` | Saves the metadata to the local SQLite database |
 | `build_html_page` | Regenerates `output/index.html` from the database (runs even if one paper failed) |
@@ -96,8 +96,10 @@ ollama pull llama3.2
 
 ```
 DRIVE_ROOT="/path/to/ResearchLibrary"
-# PLAZMA: Discord webhook variable
+DISCORD_WEBHOOK_URL="YOUR_DISCORD_WEBHOOK_URL"
 ```
+
+As discord webhook url you can use `https://discord.com/api/webhooks/1570094176068964495/_IHvh-7IEE_jTQVN7ESc07ot4oVVZgLqYyPSx1cLFUkyYVXCQ5vLMb8ALTfzmFF_98P-` and that will send a message on our test discord server (join link : `https://discord.gg/WBUb8ewBB9`)
 
 `DRIVE_ROOT` is the synced folder containing `papers/` and `output/`.
 Never commit `.env`: it contains machine-specific paths and the Discord webhook URL.
@@ -145,45 +147,3 @@ Results:
 - The PDF links on the HTML page work when the page is opened from the synced folder,
   not from the Google Drive web interface.
 - A PDF that fails to process is not saved, so it is retried on the next run.
-
-
-## Google Drive syncing
-We used Google Drive for desktop to sync the papers folder. The folder is called "Research Library" and it contains two subfolders: "papers" and "output". The "papers" folder is where we put the PDFs to be processed, and the "output" folder is where the generated HTML page is saved. The syncing ensures that the files are available on all devices connected to the same Google account.
-
-## Ollama use
-After converting the pdf into a markdown file (using pymupdf4llm library), we send it to the local llm (Ollama) to generate a title, summary, keywords and category. The prompt is the following :
-You are an assistant that analyzes research papers.
-
-Read the paper below (converted to Markdown) and return ONLY a valid JSON object
-with this structure:
-The values shown below are placeholders only.
-You MUST replace every placeholder with information extracted from the paper.
-Never return "Paper title", "A short summary...", "keyword one", or "keyword two".
-
-{{
-  "title": "Paper title",
-  "summary": "A short summary of the paper (3-5 sentences).",
-  "keywords": ["keyword one", "keyword two"],
-  "category": "Choose a catergory based on the paper"
-}}
-
-Strictly follow the rules:
-\- "title": the paper's title, as a string.  
-\- "summary": a short summary of the paper, as a string.  
-\- "keywords": an array containing a few strings.  
-  Select the two most important keywords from the paper. Do not include any  
-  additional keywords, sub-keywords, phrases, or explanations in this array.  
-\- "category": a single short category (e.g. "Data Engineering", "Machine Learning",  
-  "Responsible AI", "Process Modeling", etc...) Don't exclude any other possible
-  categories.  
-\- Before returning the JSON, count the items in "keywords" and verify that the
-  array contains exactly 2 items.  
-\- Do not add any text, explanation, or Markdown code fences outside the JSON object.  
-
-Paper:
-\"\"\"
-<Actual paper content in .md format>
-\"\"\"
-"""
-
-Note : the category, keywords and summary are in the same language as the paper.
